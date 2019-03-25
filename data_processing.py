@@ -2,102 +2,92 @@
 import os
 import pandas as pd
 import sys                 # directory opperations
+from time import sleep
                            # Custom packages 
     
     
 sys.path.append(os.path.join(sys.path[0],'modules'))
 
 import CTire_standardization as CT_S
+import geopy
+from geopy.geocoders import Nominatim            
 
 # here we load the dataset. We can load the sheet names:
 # Y dataset.load_detail
 # Y dataset.origin
 # Y dataset.destination
 # dataset.reason 
+
+
 dataset = CT_S.dataset()
-
-
-
 
 
 """
 Making data structures for the additional-information sheets
 """
+CT_Data = {}
 # _________ ORIGIN DATA ________
-CT_Dat = dict()
-origin_len = len(dataset.origin)
-orig_loc = {}
+def org_gen(origin=dataset.origin):
+	origin_len = len(origin)
+	orig_loc = {}
+	geolocator      = Nominatim(user_agent="Thomas_Kosciuch") 
 
-for i in range(0,origin_len):
-    loc_key    = dataset.origin.iloc[i]['DC #']
-    loc_city   = dataset.origin.iloc[i]['City']
-    loc_prov   = dataset.origin.iloc[i]['Prov']
-    loc_search = loc_city + ' ' + loc_prov
-    orig_loc[loc_key] = loc_search
+	for i in range(0,origin_len):
+		sleep(2)
+		loc_key    = origin.iloc[i]['DC #']
+		loc_city   = origin.iloc[i]['City']
+		loc_prov   = origin.iloc[i]['Prov']
+		loc_search = loc_city + ' ' + loc_prov + ' Canada'
+		j = 0
+		k = 0
+		while j == 0 and k < 100:   
+			try:
+				lat_lon    = geolocator.geocode(loc_search)
+				j = 1
+				print('succ: ', loc_search)
+			except:
+				k          += 1
+				lat_lon    = (0,0)
+				if k == 100: 
+					print('fail:  ', loc_search)
+		orig_loc[loc_key] = lat_lon
+	return orig_loc
 
-# _________ DESTINATION DATA ________
-dest_len = len(dataset.destination)
-dest_loc = {}
-    
-for i in range(0,dest_len):
-    loc_key    = dataset.destination.iloc[i]['Store #']
-    loc_city   = dataset.destination.iloc[i]['CITY']
-    loc_prov   = dataset.destination.iloc[i]['PROV']
-    loc_search = loc_city + ' ' + loc_prov
-    dest_loc[loc_key] = loc_search
-
+	# _________ DESTINATION DATA ________
+def des_gen(destination=dataset.destination):
+	dest_len = len(destination)
+	dest_loc = {}
+	geolocator      = Nominatim(user_agent="Thomas_Kosciuch") 
+	for i in range(0,dest_len):
+		sleep(1)   ### requir sleep for http://wiki.openstreetmap.org/wiki/Nominatim_usage_policy
+		loc_key    = destination.iloc[i]['Store #']
+		loc_city   = destination.iloc[i]['CITY']
+		loc_prov   = destination.iloc[i]['PROV']
+		loc_search = loc_city + ' ' + loc_prov + ' Canada'
+		j = 0
+		k = 0
+		while j == 0 and k < 100:                                                  
+			try:                                                                
+				lat_lon    = geolocator.geocode(loc_search)                     
+				j = 1
+				print("succ: ", loc_search)
+			except:                                                             
+				k          += 1        
+				lat_lon     = (0,0)
+				if k == 100:
+					print('fail ', loc_search)
+		dest_loc[loc_key] = lat_lon
+	return dest_loc
 # _________ REASON DATA ________       
-reas_len = len(dataset.reason)
-reas_loc = {}
-    
-for i in range(0,reas_len):
-    reas_key    = dataset.reason.iloc[i]['Reason Code']
-    reas_code   = dataset.reason.iloc[i]['Reason Code Category']
-    reas_loc[reas_key] = reas_code
+def rea_gen(reason = dataset.reason):
+	reas_len = len(reason)
+	reas_loc = {}
+	for i in range(0,reas_len):
+		reas_key    = reason.iloc[i]['Reason Code']
+		reas_code   = reason.iloc[i]['Reason Code Category']
+		reas_loc[reas_key] = reas_code
+	return reas_loc
 
-
-
-
-
-late_count = 0
-
-for i in range(0,len(dataset.load_detail)): 
-    print(i)
-    orig_search     = dataset.load_detail.iloc[i]['DC #']
-    dest_search     = dataset.load_detail.iloc[i]['Store #']
-    origin          = orig_loc[orig_search]
-    destin          = dest_loc[dest_search]
-    Standard        = CT_S.Standard(origin,destin)
-    reas_str        = dataset.load_detail.iloc[i]['Reason Code']   
-    if reas_str in reas_loc.keys():
-        reas_cod    = reas_loc[reas_str]
-    else:
-        reas_cod    = 'NA'
-    min_late        = dataset.load_detail.iloc[i]['Minutes Late']
-    per_late        = min_late/Standard.d
-    
-    if per_late > 0: 
-        late_count += 1
-
-    CT_Dat[i] = {
-        'ID'                : dataset.load_detail.iloc[i]['Load #'],
-#    'Origin'            : dataset.load_detail.iloc[i]['DC #'],
-        'Origin'            : origin,
-#    'Destination'       : dataset.load_detail.iloc[i]['Store #'],
-        'Destination'       : destin,
-        'Distance'          : Standard.d,
-        'Late_min'          : min_late,
-        'Late_min_per_100km': per_late * 100,
-        'Orig_city (DC)'    : dataset.load_detail.iloc[i]['DC #'],
-        'Dest_city (DC)'    : dataset.load_detail.iloc[i]['Store #'],
-        'Arrival_Plan'      : dataset.load_detail.iloc[i]['Original Plan Arrival'],
-        'Arrival_Actual'    : dataset.load_detail.iloc[i]['Actual Arrival'],
-        'Reason_str'        : reas_str,
-        'Reason_cat'        : reas_cod,
-        'Comments'          : dataset.load_detail.iloc[i]['Comments'],
-    }
-    
-return CT_Dat
 
 
 
