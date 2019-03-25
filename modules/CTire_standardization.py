@@ -13,7 +13,7 @@ class dataset:
     #__ Class variables __#
 
     # __ Constructor __ #
-    def __init__(self, dfs):  
+    def __init__(self):  
         xlsx_file = pd.ExcelFile("CTC.xlsx")
         dfs = {sheet_name: xlsx_file.parse(sheet_name) 
         for sheet_name in xlsx_file.sheet_names}
@@ -25,7 +25,8 @@ class dataset:
 
         
 class Standard:
-   
+    #import math
+
     """
         STANDARDIZATION
       [5 minutes late on a 1h journey] <(less punctual than)< [30 minutes late on a 10h]
@@ -40,21 +41,19 @@ class Standard:
     """
     
     def __init__(self, city_a, city_b):
+        import math
         self.city_a     = city_a
         self.city_b     = city_b
-        geolocator      = Nominatim(user_agent="Thomas_Kosciuch")
-        self.lat_long_a = geolocator.geocode(city_a)[1]
-        self.lat_long_b = geolocator.geocode(city_b)[1]
-        self.d          = "run lat_long_to_km()"
-    
-    def lat_long_to_km(self):
-        """
-        Conversion of the lat-long of a city to distance using method for short distances
-        recommended by the Jet Propulsion Laboratory and CalTech
-        """ 
-        import math
-        
-        
+        geolocator      = Nominatim(user_agent="thomas_jaroslaw_kosciuch")
+        try: 
+            self.lat_long_a = geolocator.geocode(city_a)[1]
+        except:
+            self.lat_long_a = (0,0)
+        try:
+            self.lat_long_b = geolocator.geocode(city_b)[1]
+        except:
+            self.lat_long_b = (0,0)
+
         lat_a   =  self.lat_long_a[0]
         lat_b   =  self.lat_long_b[0]
         lon_a   =  self.lat_long_a[0]
@@ -63,8 +62,6 @@ class Standard:
         d_lon   = 111.320* math.cos(lon_b - lon_a)   # distance for lon
         # a^2 + b^2 = c^2
         # for simplicity assume that world is a circle and that all roads are direct
+        
         d_diff  = math.sqrt(d_lat**2 + d_lon**2)
-        self.d  = d_diff
-        
-        #return self.d
-        
+        self.d  = d_diff    
